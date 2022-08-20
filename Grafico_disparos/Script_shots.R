@@ -7,6 +7,7 @@ library(plotly)
 library(png)
 library(magick)
 
+
 #OPCION 1: CARGAR EL WORKSPACE, ASI NO SE NECESITA TENER INSTALADO EL 
 #PAQUETE StatsBombR
 #load("data/data_goles.RData")
@@ -141,15 +142,22 @@ new <- plot %>%
 new
 
 #GUARDO PLOT FINAL
-image_write(new, path = "plots/Insig_logo.png", format = "png")
+image_write(new, path = "final_plots/Insig_logo.png", format = "png")
 
 #FUNCION PARA GENERAR GRAFICO DE UN JUGADOR
+#ARGUMENTOS:
+#data: df a emplear, debe tener infromación sobre los disparos
+#name: nombre del jugador a consultar
+#max: valor maximo a mostrar luego del cambio de ejes
+#titulo: string con el titulo del plot
+
 goles_plot <- function(data,name,max = 125,titulo){
-  #BASE DE DISPAROSQ
+  #BASE DE DISPAROS
   shots = data %>%
     filter(type.name=="Shot" & player.name == name) #1
   
-  ggplot() +
+  #GRAFICO INICIAL
+  a <- ggplot() +
     annotate("rect",xmin = 0, xmax = 120, ymin = 0, ymax = 80, fill = NA, colour = "black", size = 0.6) +
     annotate("rect",xmin = 0, xmax = 60, ymin = 0, ymax = 80, fill = NA, colour = "black", size = 0.6) +
     annotate("rect",xmin = 18, xmax = 0, ymin = 18, ymax = 62, fill = NA, colour = "black", size = 0.6) +
@@ -190,13 +198,52 @@ goles_plot <- function(data,name,max = 125,titulo){
       legend.direction = "horizontal",
       legend.position = "top",
       legend.margin = margin(c(20, 10, -85, 50)),
-      legend.key.size = unit(1.5, "cm"),
-      #panel.background = element_rect(fill = 'gray')
+      legend.key.size = unit(1.5, "cm")
     ) +
     guides(size = guide_legend(title.position = "top"),
            colour = guide_legend(title.position = "top",override.aes = list(size = 6, fill = "black"))) +
     coord_flip(xlim = c(range(shots$location.x)[1], max)) 
   
+  #PROCESO PARA AGREGAR LOGO
+  #GUARDO
+  n <- paste0("images/",name,".png")
+  ggsave(n, a, width = screen_width/130, height = screen_height/130,  dpi = 130)
+  
+  #PROCESO PARA AGREGAR LOGO STATSBOMB
+  #LEO IMAGENES
+  plot <- image_read(n)
+  
+  logo <- image_read("images/logo.png") %>%  image_resize(150)
+  
+  #OBTENGO DIMENSIONES DEL PLOT
+  plot_height <- magick::image_info(plot)$height
+  plot_width <- magick::image_info(plot)$width
+  
+  #OBTENGO DIMENSIONES DEL LOGO
+  logo_width <- magick::image_info(logo)$width
+  logo_height <- magick::image_info(logo)$height
+  
+  #CALCULO COORDENADA Y PARA UBICAR LOGO
+  y <- plot_height - logo_height - plot_height * 0.01
+  
+  #CALCULO COORDENADA X PARA UBICAR LOGO
+  x <- plot_width * 0.85
+  
+  coord <- paste0("+",x,"+",y)
+  
+  #GRAFICO MAS LOGO
+  new <- plot %>%
+    image_composite(logo, offset = coord)
+  
+  #GUARDO PLOT FINAL
+  image_write(new, path = paste0("final_plots/",name,"_logo.png"), format = "png")
+  
+  #MENSAJE
+  print("Gráfico generado y guarda en la ruta: ")
+  print(paste0("final_plots/"))
+  
+  #IMPRIMO GRAFICO
+  a
 }#FINAL FUNCTION
 
 #
@@ -220,5 +267,7 @@ goles_plot(events1,name = "Patrik Schick",max = 130,titulo = "EURO, 2021/22")
 goles_plot(events1,name = "Emil Peter Forsberg",titulo = "EURO, 2021/22")
 goles_plot(events1,name = "Karim Benzema",titulo = "EURO, 2021/22")
 goles_plot(events1,name = "Romelu Lukaku Menama",titulo = "EURO, 2021/22")
+
+
 
 
